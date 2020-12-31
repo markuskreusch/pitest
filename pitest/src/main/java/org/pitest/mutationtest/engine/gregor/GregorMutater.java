@@ -14,17 +14,10 @@
  */
 package org.pitest.mutationtest.engine.gregor;
 
+import static java.util.Arrays.stream;
 import static org.pitest.functional.prelude.Prelude.and;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -61,7 +54,7 @@ public class GregorMutater implements Mutater {
       final ClassName classToMutate) {
 
     final ClassContext context = new ClassContext();
-    context.setTargetMutation(Optional.<MutationIdentifier> empty());
+    context.setTargetMutations(Collections.emptyList());
     Optional<byte[]> bytes = GregorMutater.this.byteSource.getBytes(
         classToMutate.asInternalName());
     
@@ -92,7 +85,7 @@ public class GregorMutater implements Mutater {
   public Mutant getMutation(final MutationIdentifier id) {
 
     final ClassContext context = new ClassContext();
-    context.setTargetMutation(Optional.ofNullable(id));
+    context.setTargetMutations(Arrays.asList(id));
 
     final Optional<byte[]> bytes = this.byteSource.getBytes(id.getClassName()
         .asJavaName());
@@ -106,15 +99,42 @@ public class GregorMutater implements Mutater {
     reader.accept(mca, ClassReader.EXPAND_FRAMES);
 
     final List<MutationDetails> details = context.getMutationDetails(context
-        .getTargetMutation().get());
+        .getTargetMutations().stream().findFirst().get());
 
     return new Mutant(details.get(0), w.toByteArray());
 
   }
 
+  @Override
+  public Mutant getMetaMutation(MutationIdentifier... ids) {
+    final ClassContext context = new ClassContext();
+    context.setTargetMutations(Arrays.asList(ids));
+
+    final Optional<byte[]> bytes = this.byteSource.getBytes(ids[0].getClassName()
+            .asJavaName());
+
+    final ClassReader reader = new ClassReader(bytes.get());
+    final ClassWriter w = new ComputeClassWriter(this.byteSource,
+            this.computeCache, FrameOptions.pickFlags(bytes.get()));
+    final MutatingClassVisitor mca = new MutatingClassVisitor(w, context,
+            filterMethods(), FCollection.filter(this.mutators,
+            isMutatorFor(ids)));
+    reader.accept(mca, ClassReader.EXPAND_FRAMES);
+
+    final List<MutationDetails> details = context.getMutationDetails(context
+            .getTargetMutations().stream().findFirst().get());
+
+    return new Mutant(details.get(0), w.toByteArray());
+  }
+
   private static Predicate<MethodMutatorFactory> isMutatorFor(
       final MutationIdentifier id) {
     return a -> id.getMutator().equals(a.getGloballyUniqueId());
+  }
+
+  private static Predicate<MethodMutatorFactory> isMutatorFor(
+          final MutationIdentifier... ids) {
+    return a -> stream(ids).anyMatch(it -> it.getMutator().equals(a.getGloballyUniqueId()));
   }
 
   private Predicate<MethodInfo> filterMethods() {

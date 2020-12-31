@@ -14,13 +14,10 @@
  */
 package org.pitest.mutationtest.engine.gregor;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 
 import org.pitest.functional.FCollection;
-import java.util.Optional;
 import org.pitest.mutationtest.engine.MutationDetails;
 import org.pitest.mutationtest.engine.MutationIdentifier;
 import org.pitest.mutationtest.engine.gregor.blocks.BlockCounter;
@@ -31,13 +28,13 @@ class ClassContext implements BlockCounter {
   private ClassInfo                   classInfo;
   private String                      sourceFile;
 
-  private Optional<MutationIdentifier>  target       = Optional.empty();
+  private Collection<MutationIdentifier>  targets  = Collections.emptyList();
   private final List<MutationDetails> mutations    = new ArrayList<>();
 
   private final ConcreteBlockCounter  blockCounter = new ConcreteBlockCounter();
 
-  public Optional<MutationIdentifier> getTargetMutation() {
-    return this.target;
+  public Collection<MutationIdentifier> getTargetMutations() {
+    return this.targets;
   }
 
   public ClassInfo getClassInfo() {
@@ -52,8 +49,8 @@ class ClassContext implements BlockCounter {
     return this.sourceFile;
   }
 
-  public void setTargetMutation(final Optional<MutationIdentifier> target) {
-    this.target = target;
+  public void setTargetMutations(final Collection<MutationIdentifier> targets) {
+    this.targets = targets;
   }
 
   public List<MutationDetails> getMutationDetails(final MutationIdentifier id) {
@@ -73,7 +70,7 @@ class ClassContext implements BlockCounter {
   }
 
   public boolean shouldMutate(final MutationIdentifier newId) {
-    return getTargetMutation().filter(idMatches(newId)).isPresent();
+    return getTargetMutations().stream().filter(idMatches(newId)).findAny().isPresent();
   }
 
   private static Predicate<MutationIdentifier> idMatches(

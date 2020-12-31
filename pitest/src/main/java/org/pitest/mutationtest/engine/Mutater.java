@@ -33,6 +33,14 @@ public interface Mutater {
   Mutant getMutation(MutationIdentifier id);
 
   /**
+   * Creates a meta mutant matching all the given MutationIdentifiers
+   * @param ids
+   *          the mutants to merge into a meta mutant
+   * @return
+   */
+  Mutant getMetaMutation(MutationIdentifier ... ids);
+
+  /**
    * Scans for possible mutants in the given class
    *
    * @param classToMutate
